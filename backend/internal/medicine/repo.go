@@ -7,18 +7,20 @@ import (
 	"sync"
 )
 
-type Store struct {
+var ErrMedicineNotFound = errors.New("Medicine not found")
+
+type Repo struct {
 	mu        sync.Mutex
 	medicines map[string]Medicine
 }
 
-func NewStore() *Store {
-	return &Store{
+func NewRepo() *Repo {
+	return &Repo{
 		medicines: make(map[string]Medicine),
 	}
 }
 
-func (s *Store) GetAll() []Medicine {
+func (s *Repo) GetAll() []Medicine {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -30,7 +32,7 @@ func (s *Store) GetAll() []Medicine {
 	return result
 }
 
-func (s *Store) Create(request CreateMedicineRequest) Medicine {
+func (s *Repo) Create(request CreateMedicineRequest) Medicine {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -50,13 +52,13 @@ func (s *Store) Create(request CreateMedicineRequest) Medicine {
 	return medicine
 }
 
-func (s *Store) Update(code string, request UpdateMedicineRequest) (Medicine, error) {
+func (s *Repo) Update(code string, request UpdateMedicineRequest) (Medicine, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	medicine, ok := s.medicines[code]
 	if !ok {
-		return Medicine{}, errors.New("medicine not found")
+		return Medicine{}, ErrMedicineNotFound
 	}
 
 	// for every field in the request, if it's not nil, update the corresponding field in the medicine
@@ -76,12 +78,12 @@ func (s *Store) Update(code string, request UpdateMedicineRequest) (Medicine, er
 	return medicine, nil
 }
 
-func (s *Store) Delete(code string) error {
+func (s *Repo) Delete(code string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, ok := s.medicines[code]; !ok {
-		return errors.New("medicine not found")
+		return ErrMedicineNotFound
 	}
 
 	delete(s.medicines, code)

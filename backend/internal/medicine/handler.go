@@ -2,6 +2,7 @@ package medicine
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -9,11 +10,11 @@ import (
 )
 
 type Handler struct {
-	store *Store
+	service *MedicineService
 }
 
-func NewHandler(store *Store) *Handler {
-	return &Handler{store: store}
+func NewHandler(service *MedicineService) *Handler {
+	return &Handler{service: service}
 }
 
 func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +26,7 @@ func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		medicines := h.store.GetAll()
+		medicines := h.service.repo.GetAll()
 		json.NewEncoder(w).Encode(medicines)
 
 	case http.MethodPost:
@@ -41,7 +42,11 @@ func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		medicine := h.store.Create(body)
+		medicine, err := h.service.CreateMedicine(body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(medicine) // why create a new encoder for each request?
 
@@ -76,18 +81,23 @@ func (h *Handler) HandleMedicineByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		medicine, err := h.store.Update(id, body)
+		medicine, err := h.service.UpdateMedicine(id, body)
 		if err != nil {
-			http.Error(w, "Medicine not found", http.StatusNotFound)
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
 
 		json.NewEncoder(w).Encode(medicine)
 
 	case http.MethodDelete:
-		err := h.store.Delete(id)
+		err := h.service.DeleteMedicine(id)
 		if err != nil {
-			http.Error(w, "Medicine not found", http.StatusNotFound)
+			if errors.Is(err, ErrMedicineNotFound) {
+				http.Error(w, ErrMedicineNotFound.Error(), http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

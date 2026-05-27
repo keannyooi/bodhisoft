@@ -8,8 +8,9 @@ import (
 )
 
 func main() {
-	medicineStore := medicine.NewStore()
-	medicineHandler := medicine.NewHandler(medicineStore)
+	medicineStore := medicine.NewRepo()
+	medicieneService := medicine.NewService(medicineStore)
+	medicineHandler := medicine.NewHandler(medicieneService)
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
