@@ -3,7 +3,7 @@ package medicine
 
 import (
 	"errors"
-	"strconv"
+	"fmt"
 	"sync"
 )
 
@@ -39,13 +39,13 @@ func (s *Repo) Create(request CreateMedicineRequest) Medicine {
 	numericId := uint(len(s.medicines) + 1) // simple auto-incrementing ID
 	medicine := Medicine{
 		ID:            numericId,
-		Code:          "MED" + strconv.FormatUint(uint64(numericId), 10), // param2 is the base for conversion, 10 means decimal
+		Code:          "MED" + fmt.Sprintf("%05d", numericId), // e.g. MED00001, MED00002, etc.
 		Name:          request.Name,
 		Type:          request.Type,
 		StrengthValue: request.StrengthValue,
 		StrengthUnit:  request.StrengthUnit,
 		Description:   request.Description,
-		Status:        "Active",
+		Status:        "Available",
 	}
 
 	s.medicines[medicine.Code] = medicine
@@ -61,18 +61,7 @@ func (s *Repo) Update(code string, request UpdateMedicineRequest) (Medicine, err
 		return Medicine{}, ErrMedicineNotFound
 	}
 
-	// for every field in the request, if it's not nil, update the corresponding field in the medicine
-	for request.Name != nil {
-		medicine.Name = *request.Name
-		break
-	}
-
-	medicine.Name = *request.Name
-	medicine.Type = *request.Type
-	medicine.StrengthValue = *request.StrengthValue
-	medicine.StrengthUnit = *request.StrengthUnit
-	medicine.Description = *request.Description
-	medicine.Status = *request.Status
+	medicine.Set(request)
 	s.medicines[code] = medicine
 
 	return medicine, nil
@@ -85,6 +74,7 @@ func (s *Repo) Delete(code string) error {
 	if _, ok := s.medicines[code]; !ok {
 		return ErrMedicineNotFound
 	}
+	// TODO: prevent user from deleting medicine if it's still referenced in prescriptions
 
 	delete(s.medicines, code)
 	return nil
