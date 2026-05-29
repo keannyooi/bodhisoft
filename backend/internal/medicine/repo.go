@@ -20,6 +20,15 @@ func NewRepo() *Repo {
 	}
 }
 
+func (s *Repo) GetByCode(code string) (Medicine, error) {
+	medicine, ok := s.medicines[code]
+	if !ok {
+		return Medicine{}, ErrMedicineNotFound
+	}
+
+	return medicine, nil
+}
+
 func (s *Repo) GetAll() []Medicine {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -52,19 +61,13 @@ func (s *Repo) Create(request CreateMedicineRequest) Medicine {
 	return medicine
 }
 
-func (s *Repo) Update(code string, request UpdateMedicineRequest) (Medicine, error) {
+func (s *Repo) Update(medicine Medicine) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	medicine, ok := s.medicines[code]
-	if !ok {
-		return Medicine{}, ErrMedicineNotFound
-	}
+	s.medicines[medicine.Code] = medicine
 
-	medicine.Set(request)
-	s.medicines[code] = medicine
-
-	return medicine, nil
+	return nil
 }
 
 func (s *Repo) Delete(code string) error {

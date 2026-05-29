@@ -10,6 +10,7 @@ var ErrInvalidMedicineCode = errors.New("Invalid medicine code")
 var ErrInvalidMedicineType = errors.New("Invalid medicine type")
 var ErrInvalidStrengthUnit = errors.New("Invalid strength unit")
 var ErrInvalidMedicineStatus = errors.New("Invalid strength unit")
+var ErrMissingRequiredFields = errors.New("Missing required fields")
 
 // ================================================================================
 type MedicineService struct {
@@ -23,7 +24,7 @@ func NewService(repo *Repo) *MedicineService {
 func (s *MedicineService) CreateMedicine(req CreateMedicineRequest) (Medicine, error) {
 	// check completeness of request body
 	if req.Name == "" || req.Type == "" || req.StrengthValue == 0 || req.StrengthUnit == "" {
-		return Medicine{}, errors.New("Missing required fields")
+		return Medicine{}, ErrMissingRequiredFields
 	}
 
 	err := validateMedicineType(req.Type)
@@ -44,15 +45,23 @@ func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest)
 		return Medicine{}, ErrInvalidMedicineCode
 	}
 
+	refMedicine, err := s.repo.GetByCode(code)
+	if err != nil {
+		return Medicine{}, err
+	}
+
+	refMedicineType := refMedicine.Type
 	if req.Type != nil {
 		err := validateMedicineType(*req.Type)
 		if err != nil {
 			return Medicine{}, err
 		}
+
+		refMedicineType = *req.Type
 	}
 
 	if req.StrengthUnit != nil {
-		err := validateStrengthUnit(*req.Type, *req.StrengthUnit)
+		err := validateStrengthUnit(refMedicineType, *req.StrengthUnit)
 		if err != nil {
 			return Medicine{}, err
 		}
@@ -65,7 +74,8 @@ func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest)
 		}
 	}
 
-	return s.repo.Update(code, req)
+	refMedicine.Set(req)
+	return refMedicine, s.repo.Update(refMedicine) // TODO: refactor?
 }
 
 func (s *MedicineService) DeleteMedicine(code string) error {
