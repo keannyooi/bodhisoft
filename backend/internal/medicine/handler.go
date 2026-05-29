@@ -37,8 +37,8 @@ func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if body.Name == "" {
-			http.Error(w, "Name is required", http.StatusBadRequest)
+		if body.Name == "" || body.Type == "" || body.StrengthUnit == "" {
+			http.Error(w, "Name, type, and strength unit are required", http.StatusBadRequest)
 			return
 		}
 

@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+// sentinel errors cuz Go recommends 'em
+var ErrInvalidMedicineCode = errors.New("Invalid medicine code")
+var ErrInvalidMedicineType = errors.New("Invalid medicine type")
+var ErrInvalidStrengthUnit = errors.New("Invalid strength unit")
+var ErrInvalidMedicineStatus = errors.New("Invalid strength unit")
+
+// ================================================================================
 type MedicineService struct {
 	repo *Repo
 }
@@ -34,7 +41,7 @@ func (s *MedicineService) CreateMedicine(req CreateMedicineRequest) (Medicine, e
 
 func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest) (Medicine, error) {
 	if !strings.HasPrefix(code, "MED") {
-		return Medicine{}, errors.New("Invalid medicine code")
+		return Medicine{}, ErrInvalidMedicineCode
 	}
 
 	if req.Type != nil {
@@ -63,7 +70,7 @@ func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest)
 
 func (s *MedicineService) DeleteMedicine(code string) error {
 	if !strings.HasPrefix(code, "MED") {
-		return errors.New("Invalid medicine code")
+		return ErrInvalidMedicineCode
 	}
 	return s.repo.Delete(code)
 }
@@ -71,7 +78,7 @@ func (s *MedicineService) DeleteMedicine(code string) error {
 // validation functions since i don't want to write two sets of functions for each type of request
 func validateMedicineType(t MedicineType) error {
 	if !MedicineType(t).IsValid() {
-		return errors.New("Invalid medicine type")
+		return ErrInvalidMedicineType
 	}
 	return nil
 }
@@ -82,21 +89,22 @@ func validateStrengthUnit(t MedicineType, u StrengthUnit) error {
 	switch t {
 	case TypeTablet, TypePill:
 		if u != UnitMg && u != UnitG {
-			return errors.New("Invalid strength unit for Tablet/Pill type")
+			return ErrInvalidStrengthUnit
 		}
 	case TypeSyrup:
 		if u != UnitMgml {
-			return errors.New("Invalid strength unit for Syrup type")
+			return ErrInvalidStrengthUnit
 		}
 	default:
-		return errors.New("Invalid medicine type")
+		// note: duplicated validation, beware
+		return ErrInvalidMedicineType
 	}
 	return nil
 }
 
 func validateMedicineStatus(s MedicineStatus) error {
 	if !MedicineStatus(s).IsValid() {
-		return errors.New("Invalid medicine status")
+		return ErrInvalidMedicineStatus
 	}
 	return nil
 }
