@@ -4,6 +4,7 @@ import (
 	"bodhisoft-backend/internal/medicine"
 	"errors"
 	"log/slog"
+	"strings"
 	"testing"
 )
 
@@ -86,13 +87,20 @@ func TestMedicineService_CreateMedicine(t *testing.T) {
 
 			if !errors.Is(tt.wantErr, gotErr) {
 				t.Errorf("CreateMedicine() failed: %v, expected %v", gotErr.Error(), tt.wantErr.Error())
-			} else {
-				nameMatch := tt.want.Name == got.Name
-				typeMatch := tt.want.Type == got.Type
-				strengthValueMatch := tt.want.StrengthValue == got.StrengthValue
-				strengthUnitMatch := tt.want.StrengthUnit == got.StrengthUnit
-				descMatch := tt.want.Description == got.Description
+			}
 
+			// differentiate between positive and negative test cases here
+			if strings.Contains(tt.name, "pos - ") {
+				refMedicine, refErr := repo.GetByCode(got.Code)
+				if refErr != nil {
+					t.Errorf("CreateMedicine() failed to create a new medicine record")
+				}
+
+				nameMatch := tt.want.Name == refMedicine.Name
+				typeMatch := tt.want.Type == refMedicine.Type
+				strengthValueMatch := tt.want.StrengthValue == refMedicine.StrengthValue
+				strengthUnitMatch := tt.want.StrengthUnit == refMedicine.StrengthUnit
+				descMatch := tt.want.Description == refMedicine.Description
 				if !nameMatch || !typeMatch || !strengthValueMatch || !strengthUnitMatch || !descMatch {
 					t.Errorf("CreateMedicine() = %v, want %v", got, tt.want)
 				}
@@ -266,8 +274,13 @@ func TestMedicineService_DeleteMedicine(t *testing.T) {
 				t.Errorf("DeleteMedicine() failed: %v, expected %v", gotErr.Error(), tt.wantErr.Error())
 			}
 
-			// test whether or not the medicine is actually deleted
-
+			// differentiate between positive and negative test cases here
+			if strings.Contains(tt.name, "pos - ") {
+				_, refErr := repo.GetByCode(tt.code)
+				if refErr == nil {
+					t.Errorf("DeleteMedicine() failed to delete medicine record")
+				}
+			}
 		})
 	}
 }
