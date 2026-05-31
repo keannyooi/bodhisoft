@@ -40,12 +40,25 @@ func (s *MedicineService) CreateMedicine(req CreateMedicineRequest) (Medicine, e
 	return s.repo.Create(req), nil
 }
 
-func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest) (Medicine, error) {
+func (s *MedicineService) GetMedicine(code string) (Medicine, error) {
 	if !strings.HasPrefix(code, "MED") {
 		return Medicine{}, ErrInvalidMedicineCode
 	}
 
-	refMedicine, err := s.repo.GetByCode(code)
+	medicine, err := s.repo.GetByCode(code)
+	if err != nil {
+		return Medicine{}, err
+	}
+
+	return medicine, nil
+}
+
+func (s *MedicineService) GetMedicines() []Medicine {
+	return s.repo.GetAll()
+}
+
+func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest) (Medicine, error) {
+	refMedicine, err := s.GetMedicine(code)
 	if err != nil {
 		return Medicine{}, err
 	}
@@ -85,6 +98,7 @@ func (s *MedicineService) DeleteMedicine(code string) error {
 	return s.repo.Delete(code)
 }
 
+// ================================================================================
 // validation functions since i don't want to write two sets of functions for each type of request
 func validateMedicineType(t MedicineType) error {
 	if !MedicineType(t).IsValid() {

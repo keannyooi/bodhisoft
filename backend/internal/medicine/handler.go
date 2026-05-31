@@ -2,7 +2,6 @@ package medicine
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 
@@ -26,7 +25,7 @@ func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		medicines := h.service.repo.GetAll() // TODO: refactor
+		medicines := h.service.GetMedicines()
 		json.NewEncoder(w).Encode(medicines)
 
 	case http.MethodPost:
@@ -61,18 +60,18 @@ func (h *Handler) HandleMedicineByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//  get id from request url
-	id := strings.TrimPrefix(r.URL.Path, "/api/v1/medicines/")
+	//  get code from request url
+	code := strings.TrimPrefix(r.URL.Path, "/api/v1/medicines/")
 
 	switch r.Method {
-	// case http.MethodGet:
-	// 	medicine, err := h.store.GetByID(id)
-	// 	if err != nil {
-	// 		http.Error(w, "Medicine not found", http.StatusNotFound)
-	// 		return
-	// 	}
+	case http.MethodGet:
+		medicine, err := h.service.GetMedicine(code)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 
-	// 	json.NewEncoder(w).Encode(medicine)
+		json.NewEncoder(w).Encode(medicine)
 	case http.MethodPut:
 		var body UpdateMedicineRequest
 
@@ -81,22 +80,33 @@ func (h *Handler) HandleMedicineByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		medicine, err := h.service.UpdateMedicine(id, body)
+		medicine, err := h.service.UpdateMedicine(code, body)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			switch err {
+			case ErrMedicineNotFound:
+			case ErrInvalidMedicineCode:
+				http.Error(w, err.Error(), http.StatusNotFound)
+			case ErrInvalidMedicineType:
+			case ErrInvalidStrengthUnit:
+			case ErrInvalidMedicineStatus:
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			default:
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 
 		json.NewEncoder(w).Encode(medicine)
 
 	case http.MethodDelete:
-		if err := h.service.DeleteMedicine(id); err != nil {
-			if errors.Is(err, ErrMedicineNotFound) {
-				http.Error(w, ErrMedicineNotFound.Error(), http.StatusNotFound)
-				return
+		if err := h.service.DeleteMedicine(code); err != nil {
+			switch err {
+			case ErrMedicineNotFound:
+			case ErrInvalidMedicineCode:
+				http.Error(w, err.Error(), http.StatusNotFound)
+			default:
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
-
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

@@ -97,7 +97,7 @@ func (m Medicine) IsAvailable() bool {
 }
 
 // ================================================================================
-// requests structs
+// data transfer objects
 type CreateMedicineRequest struct {
 	Name          string       `json:"name"`
 	Type          MedicineType `json:"type"`
