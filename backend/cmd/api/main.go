@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"bodhisoft-backend/internal/medicine"
+	"bodhisoft-backend/internal/middleware"
 )
 
 func main() {
@@ -13,6 +14,7 @@ func main() {
 	medicineHandler := medicine.NewHandler(medicieneService)
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		middleware.SetCORSHeaders(w)
 		w.Write([]byte("OK"))
 	})
 

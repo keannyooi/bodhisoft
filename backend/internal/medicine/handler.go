@@ -26,7 +26,7 @@ func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		medicines := h.service.repo.GetAll()
+		medicines := h.service.repo.GetAll() // TODO: refactor
 		json.NewEncoder(w).Encode(medicines)
 
 	case http.MethodPost:
@@ -90,8 +90,7 @@ func (h *Handler) HandleMedicineByID(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(medicine)
 
 	case http.MethodDelete:
-		err := h.service.DeleteMedicine(id)
-		if err != nil {
+		if err := h.service.DeleteMedicine(id); err != nil {
 			if errors.Is(err, ErrMedicineNotFound) {
 				http.Error(w, ErrMedicineNotFound.Error(), http.StatusNotFound)
 				return
