@@ -4,6 +4,3 @@ dist/
 build/
 *.log
 .DS_Store
-
-# for now, ignore the entire web directory since expo can do the same thing as vite and we don't need both
-web/
