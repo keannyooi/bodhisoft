@@ -1,31 +1,37 @@
 const API_URL = "http://192.168.56.1:1337/api/v1";
 
+export const medicineTypes = ["Tablet", "Capsule", "Syrup"] as const;
+export type MedicineType = typeof medicineTypes[number];
+
+export const medicineStatuses = ["Available", "Discontinued"] as const;
+export type MedicineStatus = typeof medicineStatuses[number];
+
 export type Medicine = {
-    id: Number;
+    id: number;
     code: string;
     name: string;
-    type: string;
-    strengthValue: Number;
+    type: MedicineType;
+    strengthValue: number;
     strengthUnit: string;
     description?: string;
-    status: string;
+    status: MedicineStatus;
 };
 
 // request stuff
 export interface CreateMedicineRequest {
     name: string;
-    type: string;
-    strengthValue: Number;
+    type: MedicineType;
+    strengthValue: number;
     strengthUnit: string;
     description?: string;
 }
 export interface UpdateMedicineRequest {
     name?: string;
-    type?: string;
-    strengthValue?: Number;
+    type?: MedicineType;
+    strengthValue?: number;
     strengthUnit?: string;
     description?: string;
-    status?: string
+    status?: MedicineStatus
 }
 
 export async function getMedicines(): Promise<Medicine[]> {

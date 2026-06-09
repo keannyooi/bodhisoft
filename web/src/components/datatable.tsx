@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type SimpleRow = Array<string | number | React.ReactNode>;
+type SimpleRow = Array<string | number | React.ReactNode>;
 
 export default function DataTable({ headers, rows }: {
     headers: string[];
