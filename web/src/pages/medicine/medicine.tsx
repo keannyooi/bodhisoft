@@ -92,7 +92,7 @@ export default function MedicinePage() {
 
     return (
         <div>
-            <h1>Medicine</h1>
+            <h2>Medicine</h2>
 
             <button onClick={() => navigate("/medicine/create")}>Create Medicine</button>
 
