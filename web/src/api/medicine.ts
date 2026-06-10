@@ -39,6 +39,15 @@ export async function getMedicines(): Promise<Medicine[]> {
     return res.json();
 }
 
+export async function getMedicine(code: string): Promise<Medicine | null> {
+    const res = await fetch(`${API_URL}/medicines/${code}`);
+    console.log(res);
+    if (!res.ok) {
+        return null;
+    }
+    return res.json();
+}
+
 export async function createMedicine(req: CreateMedicineRequest): Promise<Medicine> {
     const res = await fetch(`${API_URL}/medicines`, {
         method: "POST",
