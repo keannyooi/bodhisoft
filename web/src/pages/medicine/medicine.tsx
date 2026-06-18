@@ -12,6 +12,11 @@ export default function MedicinePage() {
     const [filterStatus, setFilterStatus] = useState<MedicineStatus[]>([]);
     const [sortBy, setSortBy] = useState("id");
     const [isSortAsc, setIsSortAsc] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [expandedTypeFilter, setExpandedTypeFilter] = useState(true);
+    const [expandedStatusFilter, setExpandedStatusFilter] = useState(true);
+
     const navigate = useNavigate();
 
     const toggleTypeFilter = (type: MedicineType) => {
@@ -57,38 +62,47 @@ export default function MedicinePage() {
             return 0;
         });
 
-    async function loadMedicines() {
-        const data = await getMedicines();
-        setMedicines(data);
+    useEffect(() => {
+        async function loadMedicine() {
+            setLoading(true);
+            setError(null);
+
+            try {
+                if (isActive) {
+                    const data = await getMedicines();
+                    setMedicines(data);
+                }
+
+            } catch (err) {
+                setError(`Unable to load medicines: ${err}\nPlease try again.`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // boolean race condition handling
+        let isActive = true;
+        loadMedicine();
+        return () => {
+            isActive = false
+        };
+    }, []);
+
+    if (loading) {
+        return (
+            <div>
+                <p>Loading medicine list...</p>
+            </div>
+        );
     }
 
-    // async function handleCreate() {
-    //     // TODO: client-side validation
-    //     if (!name.trim()) return;
-
-    //     const req: CreateMedicineRequest = {
-    //         name: name,
-    //         type: "Tablet",
-    //         strengthValue: 50,
-    //         strengthUnit: "mg"
-    //     };
-    //     // if (description.trim() != "") {
-    //     //     req.description = description;
-    //     // }
-
-    //     await createMedicine(req);
-    //     setName("");
-    //     await loadMedicines();
-    // }
-
-    // async function handleDelete(id: string) {
-    //     await deleteMedicine(id);
-    //     await loadMedicines();
-    // }
-
-    useEffect(() => {
-        loadMedicines();
-    }, []);
+    if (error) {
+        return (
+            <div>
+                <p>{error}</p>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -112,37 +126,49 @@ export default function MedicinePage() {
                     <option value="strength">Strength</option>
                 </select>
                 <button onClick={() => setIsSortAsc(!isSortAsc)}>
-                    Sort order: {isSortAsc ? "^" : "v"}
+                    Sort order: {isSortAsc ? "▲" : "▼"}
                 </button>
             </div>
 
-            <label>Filter Type:</label>
-            {
-                medicineTypes.map(type => (
-                    <label key={type}>
-                        <input
-                            type="checkbox"
-                            checked={filterType.includes(type)}
-                            onChange={() => toggleTypeFilter(type)}
-                        />
-                        {" "} {type}
-                    </label>
-                ))
-            }
+            <div>
+                <button onClick={() => setExpandedTypeFilter(!expandedTypeFilter)}>
+                    {expandedTypeFilter ? "▼" : "▶"} Filter Type
+                </button>
+                {expandedTypeFilter && (
+                    <div>
+                        {medicineTypes.map(type => (
+                            <label key={type}>
+                                <input
+                                    type="checkbox"
+                                    checked={filterType.includes(type)}
+                                    onChange={() => toggleTypeFilter(type)}
+                                />
+                                {" "} {type}
+                            </label>
+                        ))}
+                    </div>
+                )}
+            </div>
 
-            <label>Filter Status:</label>
-            {
-                medicineStatuses.map(status => (
-                    <label key={status}>
-                        <input
-                            type="checkbox"
-                            checked={filterStatus.includes(status)}
-                            onChange={() => toggleStatusFilter(status)}
-                        />
-                        {" "} {status}
-                    </label>
-                ))
-            }
+            <div>
+                <button onClick={() => setExpandedStatusFilter(!expandedStatusFilter)}>
+                    {expandedStatusFilter ? "▼" : "▶"} Filter Status
+                </button>
+                {expandedStatusFilter && (
+                    <div>
+                        {medicineStatuses.map(status => (
+                            <label key={status}>
+                                <input
+                                    type="checkbox"
+                                    checked={filterStatus.includes(status)}
+                                    onChange={() => toggleStatusFilter(status)}
+                                />
+                                {" "} {status}
+                            </label>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             <DataTable
                 headers={["ID", "Name", "Type", "Strength", "Status", "Actions"]}

@@ -111,9 +111,13 @@ func TestMedicineService_CreateMedicine(t *testing.T) {
 
 func TestMedicineService_UpdateMedicine(t *testing.T) {
 	updateName := "Strepsils"
-	updateDesc := ""
+	updateType := medicine.TypeSyrup
+	updateStrengthUnit := medicine.UnitMgml
+	updateStatus := medicine.StatusDiscontinued
+	updateDesc := "uvuvwevwevwe onyetenyevwe ugwemubwem ossas"
+
 	var updateInvalidType medicine.MedicineType = "InvalidType"
-	updateInvalidStrengthUnit := medicine.UnitMgml
+	var updateInvalidStrengthUnit medicine.StrengthUnit = "InvalidUnit"
 	var updateInvalidStatus medicine.MedicineStatus = "InvalidStatus"
 
 	tests := []struct {
@@ -128,12 +132,18 @@ func TestMedicineService_UpdateMedicine(t *testing.T) {
 			name: "pos - multiple changes",
 			code: "MED00001",
 			req: medicine.UpdateMedicineRequest{
-				Name:        &updateName,
-				Description: &updateDesc,
+				Name:         &updateName,
+				Description:  &updateDesc,
+				Type:         &updateType,
+				StrengthUnit: &updateStrengthUnit,
+				Status:       &updateStatus,
 			},
 			want: medicine.Medicine{
-				Name:        updateName,
-				Description: updateDesc,
+				Name:         updateName,
+				Description:  updateDesc,
+				Type:         updateType,
+				StrengthUnit: updateStrengthUnit,
+				Status:       updateStatus,
 			},
 			wantErr: nil,
 		},
@@ -165,10 +175,19 @@ func TestMedicineService_UpdateMedicine(t *testing.T) {
 			wantErr: medicine.ErrInvalidMedicineType,
 		},
 		{
-			name: "neg - invalid strength unit",
+			name: "neg - invalid strength unit (1)",
 			code: "MED00001",
 			req: medicine.UpdateMedicineRequest{
 				StrengthUnit: &updateInvalidStrengthUnit,
+			},
+			want:    medicine.Medicine{},
+			wantErr: medicine.ErrInvalidStrengthUnit,
+		},
+		{
+			name: "neg - invalid strength unit (2)",
+			code: "MED00001",
+			req: medicine.UpdateMedicineRequest{
+				Type: &updateType,
 			},
 			want:    medicine.Medicine{},
 			wantErr: medicine.ErrInvalidStrengthUnit,
@@ -204,7 +223,7 @@ func TestMedicineService_UpdateMedicine(t *testing.T) {
 			// print(tt.req.StrengthUnit)
 			got, gotErr := s.UpdateMedicine(tt.code, tt.req)
 			if !errors.Is(tt.wantErr, gotErr) {
-				t.Errorf("UpdateMedicine() failed: %v, expected %v", gotErr.Error(), tt.wantErr.Error())
+				t.Errorf("UpdateMedicine() failed: %v, expected %v", gotErr, tt.wantErr)
 			} else {
 				nameMatch, typeMatch, strengthValueMatch := true, true, true
 				strengthUnitMatch, descMatch := true, true

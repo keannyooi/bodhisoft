@@ -9,7 +9,7 @@ import (
 var ErrInvalidMedicineCode = errors.New("Invalid medicine code")
 var ErrInvalidMedicineType = errors.New("Invalid medicine type")
 var ErrInvalidStrengthUnit = errors.New("Invalid strength unit")
-var ErrInvalidMedicineStatus = errors.New("Invalid strength unit")
+var ErrInvalidMedicineStatus = errors.New("Invalid medicine status")
 var ErrMissingRequiredFields = errors.New("Missing required fields")
 
 // ================================================================================
@@ -72,12 +72,15 @@ func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest)
 
 		refMedicineType = *req.Type
 	}
+	// print(refMedicineType)
 
+	refMedicineStrengthUnit := refMedicine.StrengthUnit
 	if req.StrengthUnit != nil {
-		err := validateStrengthUnit(refMedicineType, *req.StrengthUnit)
-		if err != nil {
-			return Medicine{}, err
-		}
+		refMedicineStrengthUnit = *req.StrengthUnit
+	}
+	err = validateStrengthUnit(refMedicineType, refMedicineStrengthUnit)
+	if err != nil {
+		return Medicine{}, err
 	}
 
 	if req.Status != nil {
@@ -110,8 +113,9 @@ func validateMedicineType(t MedicineType) error {
 func validateStrengthUnit(t MedicineType, u StrengthUnit) error {
 	// only "Tablet" and "Pill" type can have "mg" or "g" strength units
 	// and "Syrup" type can only have "mg/ml" strength unit
+	// print(t, u)
 	switch t {
-	case TypeTablet, TypePill:
+	case TypeTablet, TypeCapsule:
 		if u != UnitMg && u != UnitG {
 			return ErrInvalidStrengthUnit
 		}

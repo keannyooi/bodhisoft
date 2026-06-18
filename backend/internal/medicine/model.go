@@ -4,14 +4,14 @@ package medicine
 type MedicineType string
 
 const (
-	TypeTablet MedicineType = "Tablet"
-	TypePill   MedicineType = "Pill"
-	TypeSyrup  MedicineType = "Syrup"
+	TypeTablet  MedicineType = "Tablet"
+	TypeCapsule MedicineType = "Capsule"
+	TypeSyrup   MedicineType = "Syrup"
 )
 
 func (t MedicineType) IsValid() bool {
 	switch t {
-	case TypeTablet, TypePill, TypeSyrup:
+	case TypeTablet, TypeCapsule, TypeSyrup:
 		return true
 	default:
 		return false
