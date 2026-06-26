@@ -25,7 +25,11 @@ func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		medicines := h.service.GetMedicines()
+		medicines, err := h.service.GetMedicines()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		json.NewEncoder(w).Encode(medicines)
 
 	case http.MethodPost:
@@ -41,13 +45,13 @@ func (h *Handler) HandleMedicines(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		medicine, err := h.service.CreateMedicine(body)
+		code, err := h.service.CreateMedicine(body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(medicine) // why create a new encoder for each request?
+		json.NewEncoder(w).Encode(code) // why create a new encoder for each request?
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

@@ -2,18 +2,19 @@ package medicine_test
 
 import (
 	"bodhisoft-backend/internal/medicine"
+	"database/sql"
 	"errors"
-	"log/slog"
 	"strings"
 	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
 )
 
 func TestMedicineService_CreateMedicine(t *testing.T) {
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
+		name    string
 		req     medicine.CreateMedicineRequest
-		want    medicine.Medicine // TODO: replace with comparison of selected fields only
+		want    medicine.Medicine
 		wantErr error
 	}{
 		{
@@ -79,30 +80,36 @@ func TestMedicineService_CreateMedicine(t *testing.T) {
 			wantErr: medicine.ErrInvalidMedicineType,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := medicine.NewRepo() // to prevent the results of unit tests from affecting each other
-			s := medicine.NewService(repo)
-			got, gotErr := s.CreateMedicine(tt.req)
+			dbMock, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to open sqlmock database: %v", err)
+			}
+			defer dbMock.Close()
 
-			if !errors.Is(tt.wantErr, gotErr) {
-				t.Errorf("CreateMedicine() failed: %v, expected %v", gotErr.Error(), tt.wantErr.Error())
+			repo := medicine.NewRepo(dbMock)
+			s := medicine.NewService(repo)
+
+			if strings.Contains(tt.name, "pos - ") {
+				mock.ExpectExec("^INSERT INTO medicine").WithArgs(tt.req.Name, tt.req.Type, tt.req.StrengthValue, tt.req.StrengthUnit, tt.req.Description).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec("^UPDATE medicine SET medicineCode =").WithArgs(sqlmock.AnyArg(), int64(1)).WillReturnResult(sqlmock.NewResult(0, 1))
 			}
 
-			// differentiate between positive and negative test cases here
-			if strings.Contains(tt.name, "pos - ") {
-				refMedicine, refErr := repo.GetByCode(got.Code)
-				if refErr != nil {
-					t.Errorf("CreateMedicine() failed to create a new medicine record")
-				}
+			gotCode, gotErr := s.CreateMedicine(tt.req)
 
-				nameMatch := tt.want.Name == refMedicine.Name
-				typeMatch := tt.want.Type == refMedicine.Type
-				strengthValueMatch := tt.want.StrengthValue == refMedicine.StrengthValue
-				strengthUnitMatch := tt.want.StrengthUnit == refMedicine.StrengthUnit
-				descMatch := tt.want.Description == refMedicine.Description
-				if !nameMatch || !typeMatch || !strengthValueMatch || !strengthUnitMatch || !descMatch {
-					t.Errorf("CreateMedicine() = %v, want %v", got, tt.want)
+			if !errors.Is(tt.wantErr, gotErr) {
+				t.Fatalf("CreateMedicine() failed: got %v, want %v", gotErr, tt.wantErr)
+			}
+
+			if strings.Contains(tt.name, "pos - ") {
+				if err := mock.ExpectationsWereMet(); err != nil {
+					t.Fatalf("unfulfilled expectations: %v", err)
+				}
+				if gotCode == "" {
+					t.Fatal("CreateMedicine() returned empty medicine code")
 				}
 			}
 		})
@@ -121,8 +128,7 @@ func TestMedicineService_UpdateMedicine(t *testing.T) {
 	var updateInvalidStatus medicine.MedicineStatus = "InvalidStatus"
 
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
+		name    string
 		code    string
 		req     medicine.UpdateMedicineRequest
 		want    medicine.Medicine
@@ -203,48 +209,46 @@ func TestMedicineService_UpdateMedicine(t *testing.T) {
 		},
 	}
 
-	// setup
-	repo := medicine.NewRepo() // to prevent the results of unit tests from affecting each other
-	s := medicine.NewService(repo)
-	_, err := s.CreateMedicine(medicine.CreateMedicineRequest{
-		Name:          "Paracetamol",
-		Type:          medicine.TypeTablet,
-		StrengthValue: 500,
-		StrengthUnit:  medicine.UnitMg,
-		Description:   "Used to treat pain and fever",
-	})
-	if err != nil {
-		slog.Error("CreateMedicine() failed during test environment setup. Run TestMedicineService_CreateMedicine for more information.")
-		return
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// print(tt.req.StrengthUnit)
+			dbMock, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to open sqlmock database: %v", err)
+			}
+			defer dbMock.Close()
+
+			repo := medicine.NewRepo(dbMock)
+			s := medicine.NewService(repo)
+
+			if strings.Contains(tt.name, "pos - ") || tt.wantErr == medicine.ErrInvalidMedicineType || tt.wantErr == medicine.ErrInvalidStrengthUnit || tt.wantErr == medicine.ErrInvalidMedicineStatus {
+				rows := sqlmock.NewRows([]string{"medicineId", "medicineCode", "name", "type", "strengthValue", "strengthUnit", "description", "status"}).AddRow(1, tt.code, "Paracetamol", medicine.TypeTablet, 500, medicine.UnitMg, "Used to treat pain and fever", "Available")
+				mock.ExpectQuery("^SELECT \\* FROM medicine WHERE medicineCode = \\?;$").WithArgs(tt.code).WillReturnRows(rows)
+			}
+
+			if tt.wantErr == medicine.ErrMedicineNotFound {
+				mock.ExpectQuery("^SELECT \\* FROM medicine WHERE medicineCode = \\?;$").WithArgs(tt.code).WillReturnError(sql.ErrNoRows)
+			}
+
+			strengthValue := uint(500)
+			if tt.req.StrengthValue != nil {
+				strengthValue = *tt.req.StrengthValue
+			}
+
+			if strings.Contains(tt.name, "pos - ") {
+				mock.ExpectExec("^UPDATE medicine").WithArgs(updateName, updateType, strengthValue, updateStrengthUnit, updateDesc, updateStatus, int64(1)).WillReturnResult(sqlmock.NewResult(0, 1))
+			}
+
 			got, gotErr := s.UpdateMedicine(tt.code, tt.req)
 			if !errors.Is(tt.wantErr, gotErr) {
-				t.Errorf("UpdateMedicine() failed: %v, expected %v", gotErr, tt.wantErr)
-			} else {
-				nameMatch, typeMatch, strengthValueMatch := true, true, true
-				strengthUnitMatch, descMatch := true, true
-				if tt.req.Name != nil {
-					nameMatch = tt.want.Name == got.Name
-				}
-				if tt.req.Type != nil {
-					typeMatch = tt.want.Type == got.Type
-				}
-				if tt.req.StrengthValue != nil {
-					strengthValueMatch = tt.want.StrengthValue == got.StrengthValue
-				}
-				if tt.req.StrengthUnit != nil {
-					strengthUnitMatch = tt.want.StrengthUnit == got.StrengthUnit
-				}
-				if tt.req.Description != nil {
-					descMatch = tt.want.Description == got.Description
-				}
+				t.Fatalf("UpdateMedicine() failed: got %v, want %v", gotErr, tt.wantErr)
+			}
 
-				if !nameMatch || !typeMatch || !strengthValueMatch || !strengthUnitMatch || !descMatch {
-					t.Errorf("UpdateMedicine() = %v, want %v", got, tt.want)
+			if tt.wantErr == nil && strings.Contains(tt.name, "pos - ") {
+				if err := mock.ExpectationsWereMet(); err != nil {
+					t.Fatalf("unfulfilled expectations: %v", err)
+				}
+				if got.Name != tt.want.Name || got.Type != tt.want.Type || got.StrengthUnit != tt.want.StrengthUnit || got.Description != tt.want.Description {
+					t.Fatalf("UpdateMedicine() = %v, want %v", got, tt.want)
 				}
 			}
 		})
@@ -253,9 +257,7 @@ func TestMedicineService_UpdateMedicine(t *testing.T) {
 
 func TestMedicineService_DeleteMedicine(t *testing.T) {
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for receiver constructor.
-		// Named input parameters for target function.
+		name    string
 		code    string
 		wantErr error
 	}{
@@ -272,32 +274,28 @@ func TestMedicineService_DeleteMedicine(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		// setup
-		repo := medicine.NewRepo() // to prevent the results of unit tests from affecting each other
-		s := medicine.NewService(repo)
-		_, err := s.CreateMedicine(medicine.CreateMedicineRequest{
-			Name:          "Paracetamol",
-			Type:          medicine.TypeTablet,
-			StrengthValue: 500,
-			StrengthUnit:  medicine.UnitMg,
-			Description:   "Used to treat pain and fever",
-		})
-		if err != nil {
-			slog.Error("CreateMedicine() failed during test environment setup. Run TestMedicineService_CreateMedicine for more information.")
-			return
-		}
-
 		t.Run(tt.name, func(t *testing.T) {
-			gotErr := s.DeleteMedicine(tt.code)
-			if !errors.Is(tt.wantErr, gotErr) {
-				t.Errorf("DeleteMedicine() failed: %v, expected %v", gotErr.Error(), tt.wantErr.Error())
+			dbMock, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to open sqlmock database: %v", err)
+			}
+			defer dbMock.Close()
+
+			repo := medicine.NewRepo(dbMock)
+			s := medicine.NewService(repo)
+
+			if strings.Contains(tt.name, "pos - ") {
+				mock.ExpectExec("^DELETE FROM medicine").WithArgs(tt.code).WillReturnResult(sqlmock.NewResult(0, 1))
 			}
 
-			// differentiate between positive and negative test cases here
+			gotErr := s.DeleteMedicine(tt.code)
+			if !errors.Is(tt.wantErr, gotErr) {
+				t.Fatalf("DeleteMedicine() failed: got %v, want %v", gotErr, tt.wantErr)
+			}
+
 			if strings.Contains(tt.name, "pos - ") {
-				_, refErr := repo.GetByCode(tt.code)
-				if refErr == nil {
-					t.Errorf("DeleteMedicine() failed to delete medicine record")
+				if err := mock.ExpectationsWereMet(); err != nil {
+					t.Fatalf("unfulfilled expectations: %v", err)
 				}
 			}
 		})

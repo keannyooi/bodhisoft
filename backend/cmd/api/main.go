@@ -4,14 +4,19 @@ import (
 	"log"
 	"net/http"
 
+	"bodhisoft-backend/internal/db"
 	"bodhisoft-backend/internal/medicine"
 	"bodhisoft-backend/internal/middleware"
 )
 
 func main() {
-	medicineStore := medicine.NewRepo()
+	db := db.ConnectDB()
+	medicineStore := medicine.NewRepo(db)
 	medicieneService := medicine.NewService(medicineStore)
 	medicineHandler := medicine.NewHandler(medicieneService)
+
+	// testing something here
+	db.Exec("SELECT * FROM medicine")
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		middleware.SetCORSHeaders(w)

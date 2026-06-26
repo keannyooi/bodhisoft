@@ -114,6 +114,7 @@ export default function MedicineDetailsPage() {
                     <button onClick={() => navigate(`/medicine/update/${medicine.code}`)}>
                         Update
                     </button>
+                    {/* TODO: make this a Discontinue button if the medicine already sees use */}
                     <button onClick={handleDelete}>Delete</button>
                 </div>
             </div>

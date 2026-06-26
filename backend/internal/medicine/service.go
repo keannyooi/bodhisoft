@@ -21,23 +21,20 @@ func NewService(repo *Repo) *MedicineService {
 	return &MedicineService{repo: repo}
 }
 
-func (s *MedicineService) CreateMedicine(req CreateMedicineRequest) (Medicine, error) {
+func (s *MedicineService) CreateMedicine(req CreateMedicineRequest) (string, error) {
 	// check completeness of request body
 	if req.Name == "" || req.Type == "" || req.StrengthValue == 0 || req.StrengthUnit == "" {
-		return Medicine{}, ErrMissingRequiredFields
+		return "", ErrMissingRequiredFields
 	}
 
-	err := validateMedicineType(req.Type)
-	if err != nil {
-		return Medicine{}, err
+	if err := validateMedicineType(req.Type); err != nil {
+		return "", err
+	}
+	if err := validateStrengthUnit(req.Type, req.StrengthUnit); err != nil {
+		return "", err
 	}
 
-	err = validateStrengthUnit(req.Type, req.StrengthUnit)
-	if err != nil {
-		return Medicine{}, err
-	}
-
-	return s.repo.Create(req), nil
+	return s.repo.Create(req)
 }
 
 func (s *MedicineService) GetMedicine(code string) (Medicine, error) {
@@ -53,8 +50,15 @@ func (s *MedicineService) GetMedicine(code string) (Medicine, error) {
 	return medicine, nil
 }
 
-func (s *MedicineService) GetMedicines() []Medicine {
-	return s.repo.GetAll()
+func (s *MedicineService) GetMedicines() ([]Medicine, error) {
+	var medicines []Medicine
+
+	medicines, err := s.repo.GetAll()
+	if err != nil {
+		return medicines, err
+	}
+
+	return medicines, nil
 }
 
 func (s *MedicineService) UpdateMedicine(code string, req UpdateMedicineRequest) (Medicine, error) {

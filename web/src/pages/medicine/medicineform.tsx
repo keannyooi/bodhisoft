@@ -1,36 +1,40 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useParams, useLocation } from "react-router";
-import type { CreateMedicineRequest, MedicineStrengthUnit, MedicineType } from "../../api/medicine";
-import { createMedicine, getMedicine, medicineTypes, getUnitsFromType, updateMedicine } from "../../api/medicine";
-
-type MedicineFormErrors = {
-    name?: string;
-    type?: string;
-    strengthValue?: string;
-    description?: string;
-};
+import { Link, useNavigate, useParams } from "react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { MedicineType, MedicineFormValues } from "../../api/medicine";
+import { createMedicine, getMedicine, medicineTypes, medicineSchema, getUnitsFromType, updateMedicine } from "../../api/medicine";
 
 export default function MedicineFormPage() {
-    const [name, setName] = useState("");
-    const [type, setType] = useState<MedicineType>(medicineTypes[0]);
-    const [strengthValue, setStrengthValue] = useState(1);
-    const [strengthUnits, setStrengthUnits] = useState<MedicineStrengthUnit[]>(getUnitsFromType(medicineTypes[0]));
-    const [strengthUnitIndex, setStrengthUnitIndex] = useState(0);
-    const [description, setDescription] = useState("");
-    const [errors, setErrors] = useState<MedicineFormErrors>({});
     const [loading, setLoading] = useState(true);
-
     const { code } = useParams<{ code?: string }>();
     const isUpdate = Boolean(code);
     const navigate = useNavigate();
-    const location = useLocation();
 
-    function handleTypeChange(type: string) {
-        const medicineType = type as MedicineType;
-        setType(medicineType);
+    const defaultType = medicineTypes[0];
+    const defaultStrengthUnits = getUnitsFromType(defaultType);
 
-        setStrengthUnits(getUnitsFromType(type));
-    }
+    const {
+        register,
+        handleSubmit,
+        watch,
+        reset,
+        setValue,
+        formState: { errors },
+    } = useForm<MedicineFormValues>({
+        resolver: zodResolver(medicineSchema),
+        defaultValues: {
+            name: "",
+            type: defaultType,
+            strengthValue: 1,
+            strengthUnit: defaultStrengthUnits[0],
+            description: "",
+        },
+    });
+
+    const selectedType = watch("type") || defaultType;
+    const selectedStrengthUnit = watch("strengthUnit") || defaultStrengthUnits[0];
+    const strengthUnits = getUnitsFromType(selectedType);
 
     useEffect(() => {
         if (!isUpdate) {
@@ -39,7 +43,6 @@ export default function MedicineFormPage() {
         }
 
         async function loadMedicine() {
-            console.log(location);
             if (!code) {
                 navigate("/medicine", { replace: true });
                 return;
@@ -56,63 +59,52 @@ export default function MedicineFormPage() {
                         return;
                     }
 
-                    setName(data.name);
-                    setStrengthValue(data.strengthValue);
-                    setType(data.type);
-                    setStrengthUnits(getUnitsFromType(data.type));
-                    if (data.description) setDescription(data.description);
+                    // set new default values as fields of loaded medicine
+                    reset({
+                        name: data.name,
+                        type: data.type,
+                        strengthValue: data.strengthValue,
+                        strengthUnit: data.strengthUnit,
+                        description: data.description ?? "",
+                    });
                 }
             } catch (err) {
-                console.log(err);
+                console.error(err);
             } finally {
                 setLoading(false);
             }
         }
 
-        // boolean race condition handling
         let isActive = true;
         loadMedicine();
         return () => {
-            isActive = false
+            isActive = false;
         };
-    }, [code, navigate]);
+    }, [code, isUpdate, navigate, reset]);
 
-    // TODO: handle race conditions
-    async function handleSubmit() {
-        const obtainedErrors: MedicineFormErrors = {};
-        if (name.trim() === "") {
-            obtainedErrors.name = "Name is required";
+    useEffect(() => {
+        if (!strengthUnits.includes(selectedStrengthUnit)) {
+            setValue("strengthUnit", strengthUnits[0]);
         }
-        if (strengthValue <= 0 || strengthValue > 999) {
-            obtainedErrors.strengthValue = "Strength value must be between 1 and 999";
-        }
+    }, [selectedStrengthUnit, strengthUnits, setValue]);
 
-
-        if (Object.keys(obtainedErrors).length > 0) return setErrors(obtainedErrors);
-
-        const req: CreateMedicineRequest = {
-            name: name.trim(),
-            type: type as MedicineType,
-            strengthValue,
-            strengthUnit: strengthUnits[strengthUnitIndex] as MedicineStrengthUnit,
-        }
-        if (isUpdate || description.trim() !== "") {
-            req.description = description.trim();
-        }
-
-        let result;
-        if (code) {
-            result = await updateMedicine(code, req);
-        } else {
-            result = await createMedicine(req);
-        }
+    const onSubmit = async (values: MedicineFormValues) => {
+        const result = code ? await updateMedicine(code, values) : await createMedicine(values);
 
         if (!result) {
-            return alert("Failed to save medicine. Please try again.");
+            alert("Failed to save medicine. Please try again.");
+            return;
         }
 
-        return navigate(`/medicine/${result.code}`);
-    }
+        console.log(result);
+
+        if (typeof result === "string") {
+            navigate(`/medicine/${result}`);
+        }
+        else {
+            navigate(`/medicine/${result.code}`);
+        }
+    };
 
     if (loading) {
         return (
@@ -128,71 +120,57 @@ export default function MedicineFormPage() {
                 <h2>{code ? "Update" : "Create"} Medicine</h2>
                 <Link to="/medicine">Back to List</Link>
             </div>
-            <form onSubmit={(e) => {
-                e.preventDefault();
-                handleSubmit();
-            }}>
+            <form onSubmit={handleSubmit(onSubmit)}>
                 <label htmlFor="name">Name:</label>
-                <input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="New medicine name"
-                />
-                {errors.name && <div style={{ color: "red" }}>{errors.name}</div>}
+                <input id="name" {...register("name")} placeholder="Medicine name here" />
+                {errors.name && <div style={{ color: "red" }}>{errors.name.message}</div>}
                 <br />
 
                 <label htmlFor="type">Type:</label>
                 <select
                     id="type"
-                    value={type}
-                    onChange={(e) => handleTypeChange(e.target.value)}
+                    {...register("type", {
+                        onChange: (e) => {
+                            const newType = e.target.value as MedicineType;
+                            setValue("strengthUnit", getUnitsFromType(newType)[0]);
+                        },
+                    })}
                 >
                     {medicineTypes.map((t) => (
-                        <option key={t} value={t}>{t}</option>
+                        <option key={t} value={t}>
+                            {t}
+                        </option>
                     ))}
                 </select>
-                {errors.type && <div style={{ color: "red" }}>{errors.type}</div>}
+                {errors.type && <div style={{ color: "red" }}>{errors.type.message}</div>}
                 <br />
 
                 <label htmlFor="strengthValue">Strength:</label>
                 <input
                     id="strengthValue"
                     type="number"
-                    value={strengthValue}
-                    min={1}
-                    max={999}
-                    onChange={(e) => setStrengthValue(Number(e.target.value))}
+                    {...register("strengthValue", {
+                        valueAsNumber: true,
+                    })}
                     placeholder="Strength value"
                 />
-                <select
-                    id="strengthUnit"
-                    value={strengthUnitIndex}
-                    onChange={(e) => setStrengthUnitIndex(parseInt(e.target.value, 10))}
-                >
-                    {strengthUnits.map((t, index) => (
-                        <option key={t} value={index}>{t}</option>
+                <select id="strengthUnit" {...register("strengthUnit")}>
+                    {strengthUnits.map((t) => (
+                        <option key={t} value={t}>
+                            {t}
+                        </option>
                     ))}
                 </select>
-                {
-                    errors.strengthValue && <div style={{ color: "red" }}>{errors.strengthValue}</div>
-                }
+                {errors.strengthValue && <div style={{ color: "red" }}>{errors.strengthValue.message}</div>}
                 <br />
 
                 <label htmlFor="description">Description:</label>
-                <textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Description"
-                />
-                {
-                    errors.description && <div style={{ color: "red" }}>{errors.description}</div>
-                }
+                <textarea id="description" {...register("description")} placeholder="Description" />
+                {errors.description && <div style={{ color: "red" }}>{errors.description.message}</div>}
                 <br />
 
                 <button type="submit">{code ? "Update Medicine" : "Create Medicine"}</button>
             </form>
         </>
-    )
+    );
 }

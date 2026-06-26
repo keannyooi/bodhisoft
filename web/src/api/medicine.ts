@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 const API_URL = "http://192.168.56.1:1337/api/v1";
 
 export const medicineTypes = ["Tablet", "Capsule", "Syrup"] as const;
@@ -21,21 +23,15 @@ export type Medicine = {
 };
 
 // request stuff
-export interface CreateMedicineRequest {
-    name: string;
-    type: MedicineType;
-    strengthValue: number;
-    strengthUnit: MedicineStrengthUnit;
-    description?: string;
-}
-export interface UpdateMedicineRequest {
-    name?: string;
-    type?: MedicineType;
-    strengthValue?: number;
-    strengthUnit?: MedicineStrengthUnit;
-    description?: string;
-    status?: MedicineStatus
-}
+export const medicineSchema = z.object({
+    name: z.string().trim().min(1, "Medicine name is required"),
+    type: z.enum(medicineTypes),
+    strengthValue: z.number().min(1, "Strength value must be at least 1").max(999, "Strength value must be 999 or less"),
+    strengthUnit: z.enum(medicineStrengthUnits),
+    description: z.string().trim().optional(),
+});
+
+export type MedicineFormValues = z.infer<typeof medicineSchema>;
 
 export function getUnitsFromType(type: string): Array<MedicineStrengthUnit> {
     const medicineType = type as MedicineType;
@@ -64,7 +60,7 @@ export async function getMedicine(code: string): Promise<Medicine | null> {
     return res.json();
 }
 
-export async function createMedicine(req: CreateMedicineRequest): Promise<Medicine | null> {
+export async function createMedicine(req: MedicineFormValues): Promise<string | null> {
     const res = await fetch(`${API_URL}/medicines`, {
         method: "POST",
         headers: {
@@ -76,10 +72,12 @@ export async function createMedicine(req: CreateMedicineRequest): Promise<Medici
     if (!res.ok) {
         return null;
     }
-    return res.json();
+
+    const code = await res.text();
+    return code.replaceAll('"', '');
 }
 
-export async function updateMedicine(code: string, req: UpdateMedicineRequest): Promise<Medicine | null> {
+export async function updateMedicine(code: string, req: MedicineFormValues): Promise<Medicine | null> {
     console.log(req);
     const res = await fetch(`${API_URL}/medicines/${code}`, {
         method: "PUT",
