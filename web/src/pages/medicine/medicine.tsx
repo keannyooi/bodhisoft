@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+
 import type { Medicine, MedicineType, MedicineStatus } from "../../api/medicine";
 import { getMedicines, medicineTypes, medicineStatuses } from "../../api/medicine";
-import { useNavigate } from "react-router";
 import DataTable from "../../components/datatable";
+import Pagination from "../../components/pagination";
 import '../../App.css';
 
 export default function MedicinePage() {
@@ -16,6 +18,7 @@ export default function MedicinePage() {
     const [error, setError] = useState<string | null>(null);
     const [expandedTypeFilter, setExpandedTypeFilter] = useState(true);
     const [expandedStatusFilter, setExpandedStatusFilter] = useState(true);
+    const [page, setPage] = useState(1);
 
     const navigate = useNavigate();
 
@@ -61,6 +64,13 @@ export default function MedicinePage() {
             if (valA > valB) return isSortAsc ? 1 : -1;
             return 0;
         });
+
+    const pageSize = 5;
+
+    const totalPages = Math.max(1, Math.ceil(processedMedicines.length / pageSize));
+    const safePage = Math.min(page, totalPages);
+    const paginatedMedicines = processedMedicines.slice((safePage - 1) * pageSize, safePage * pageSize);
+
 
     useEffect(() => {
         async function loadMedicine() {
@@ -172,7 +182,7 @@ export default function MedicinePage() {
 
             <DataTable
                 headers={["ID", "Name", "Type", "Strength", "Status", "Actions"]}
-                rows={processedMedicines.map((medicine) => [
+                rows={paginatedMedicines.map((medicine) => [
                     medicine.code,
                     medicine.name,
                     medicine.type,
@@ -181,6 +191,8 @@ export default function MedicinePage() {
                     <button onClick={() => navigate(`/medicine/${medicine.code}`)}>View Details</button>
                 ])}
             />
+
+            <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
         </div>
     );
 }
