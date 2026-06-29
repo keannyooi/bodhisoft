@@ -8,7 +8,7 @@ export default function Pagination({
     onPageChange: React.Dispatch<React.SetStateAction<number>>;
 }) {
     return (
-        <div>
+        <div className="pagination">
             <button onClick={() => onPageChange((p) => Math.max(p - 1, 1))}>
                 Previous
             </button>
@@ -21,3 +21,5 @@ export default function Pagination({
         </div>
     );
 }
+
+export const pageSize = 10;

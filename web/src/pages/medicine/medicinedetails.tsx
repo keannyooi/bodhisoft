@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+
 import type { Medicine } from "../../api/medicine";
 import { deleteMedicine, getMedicine } from "../../api/medicine";
+import DataTable from "../../components/datatable";
+import '../../App.css';
 
 export default function MedicineDetailsPage() {
     const [medicine, setMedicine] = useState<Medicine | null>(null);
@@ -75,49 +78,37 @@ export default function MedicineDetailsPage() {
     }
 
     return (
-        <>
-            <div>
-                <h2>Medicine Details: {medicine.code}</h2>
+        <div className="page-shell">
+            <div className="page-header">
+                <h2>Medicine Details</h2>
                 <Link to="/medicine">Back to List</Link>
             </div>
-            <div>
-                <div>
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td>Name</td>
-                                <td>{medicine.name}</td>
-                            </tr>
-                            <tr>
-                                <td>Type</td>
-                                <td>{medicine.type}</td>
-                            </tr>
-                            <tr>
-                                <td>Strength</td>
-                                <td>
-                                    {medicine.strengthValue} {medicine.strengthUnit}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Description</td>
-                                <td>{medicine.description ?? "-"}</td>
-                            </tr>
-                            <tr>
-                                <td>Status</td>
-                                <td>{medicine.status}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+            <div className="details-group">
+                <div className="section-card">
+                    <DataTable
+                        headers={["ID", medicine.code]}
+                        rows={[
+                            ["Name", medicine.name],
+                            ["Type", medicine.type],
+                            ["Strength", `${medicine.strengthValue} ${medicine.strengthUnit}`],
+                            ["Description", medicine.description ?? "-"],
+                            ["Status", medicine.status],
+                        ]}
+                    />
                 </div>
-                <div>
+
+                <div className="section-card">
                     <h3>Administrator Actions</h3>
-                    <button onClick={() => navigate(`/medicine/update/${medicine.code}`)}>
-                        Update
-                    </button>
-                    {/* TODO: make this a Discontinue button if the medicine already sees use */}
-                    <button onClick={handleDelete}>Delete</button>
+                    <div className="action-stack">
+                        <button onClick={() => navigate(`/medicine/update/${medicine.code}`)}>
+                            Update
+                        </button>
+                        {/* TODO: make this a Discontinue button if the medicine already sees use */}
+                        <button onClick={handleDelete}>Delete</button>
+                    </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

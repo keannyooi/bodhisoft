@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { MedicineType, MedicineFormValues } from "../../api/medicine";
 import { createMedicine, getMedicine, medicineTypes, medicineSchema, getUnitsFromType, updateMedicine } from "../../api/medicine";
+import '../../App.css';
 
 export default function MedicineFormPage() {
     const [loading, setLoading] = useState(true);
@@ -115,62 +116,73 @@ export default function MedicineFormPage() {
     }
 
     return (
-        <>
-            <div>
+        <div className="page-shell">
+            <div className="page-header">
                 <h2>{code ? "Update" : "Create"} Medicine</h2>
-                <Link to="/medicine">Back to List</Link>
+                <button onClick={() => navigate("/medicine")}>Back to List</button>
             </div>
-            <form onSubmit={handleSubmit(onSubmit)}>
-                <label htmlFor="name">Name:</label>
-                <input id="name" {...register("name")} placeholder="Medicine name here" />
-                {errors.name && <div style={{ color: "red" }}>{errors.name.message}</div>}
-                <br />
 
-                <label htmlFor="type">Type:</label>
-                <select
-                    id="type"
-                    {...register("type", {
-                        onChange: (e) => {
-                            const newType = e.target.value as MedicineType;
-                            setValue("strengthUnit", getUnitsFromType(newType)[0]);
-                        },
-                    })}
-                >
-                    {medicineTypes.map((t) => (
-                        <option key={t} value={t}>
-                            {t}
-                        </option>
-                    ))}
-                </select>
-                {errors.type && <div style={{ color: "red" }}>{errors.type.message}</div>}
-                <br />
+            <div className="form-card">
+                <form onSubmit={handleSubmit(onSubmit)} className="form-grid">
+                    <div className="form-field">
+                        <label htmlFor="name">Name:</label>
+                        <input id="name" {...register("name")} placeholder="Medicine name here" />
+                        {errors.name && <div style={{ color: "red" }}>{errors.name.message}</div>}
+                    </div>
 
-                <label htmlFor="strengthValue">Strength:</label>
-                <input
-                    id="strengthValue"
-                    type="number"
-                    {...register("strengthValue", {
-                        valueAsNumber: true,
-                    })}
-                    placeholder="Strength value"
-                />
-                <select id="strengthUnit" {...register("strengthUnit")}>
-                    {strengthUnits.map((t) => (
-                        <option key={t} value={t}>
-                            {t}
-                        </option>
-                    ))}
-                </select>
-                {errors.strengthValue && <div style={{ color: "red" }}>{errors.strengthValue.message}</div>}
-                <br />
+                    <div className="form-field">
+                        <label htmlFor="type">Type:</label>
+                        <select
+                            id="type"
+                            {...register("type", {
+                                onChange: (e) => {
+                                    const newType = e.target.value as MedicineType;
+                                    setValue("strengthUnit", getUnitsFromType(newType)[0]);
+                                },
+                            })}
+                        >
+                            {medicineTypes.map((t) => (
+                                <option key={t} value={t}>
+                                    {t}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.type && <div style={{ color: "red" }}>{errors.type.message}</div>}
+                    </div>
 
-                <label htmlFor="description">Description:</label>
-                <textarea id="description" {...register("description")} placeholder="Description" />
-                {errors.description && <div style={{ color: "red" }}>{errors.description.message}</div>}
-                <br />
+                    <div className="form-field">
+                        <label htmlFor="strengthValue">Strength:</label>
+                        <div className="controls-row strength-row">
+                            <input
+                                id="strengthValue"
+                                type="number"
+                                {...register("strengthValue", {
+                                    valueAsNumber: true,
+                                })}
+                                placeholder="Strength value"
+                            />
+                            <select id="strengthUnit" {...register("strengthUnit")}>
+                                {strengthUnits.map((t) => (
+                                    <option key={t} value={t}>
+                                        {t}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {errors.strengthValue && <div style={{ color: "red" }}>{errors.strengthValue.message}</div>}
+                    </div>
 
-                <button type="submit">{code ? "Update Medicine" : "Create Medicine"}</button>
-            </form>
-        </>
+                    <div className="form-field">
+                        <label htmlFor="description">Description:</label>
+                        <textarea id="description" {...register("description")} placeholder="Description" />
+                        {errors.description && <div style={{ color: "red" }}>{errors.description.message}</div>}
+                    </div>
+
+                    <div className="form-actions">
+                        <button type="submit">{code ? "Update Medicine" : "Create Medicine"}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 }

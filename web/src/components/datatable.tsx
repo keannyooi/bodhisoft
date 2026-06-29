@@ -11,38 +11,38 @@ export default function DataTable({ headers, rows }: {
     }
 
     return (
-        <table>
-            <thead>
-                <tr>
+        <div className="datatable-container">
+            <table className="datatable">
+                <thead>
+                    <tr className="datatable-header">
+                        {
+                            headers.map((h) => (
+                                <th key={h}> {h} </th>
+                            ))
+                        }
+                    </tr>
+                </thead>
+                <tbody>
                     {
-                        headers.map((h) => (
-                            <th key={h} > {h} </th>
-                        ))
+                        rows.map((row, i) => {
+                            return (
+                                <tr key={i}>
+                                    {
+                                        row.map((cell, j) => {
+                                            if (cell === null || cell === undefined) {
+                                                return <td key={j}>-</td>;
+                                            }
+                                            else {
+                                                return <td key={j}> {cell} </td>;
+                                            }
+                                        })
+                                    }
+                                </tr>
+                            );
+                        })
                     }
-                </tr>
-            </thead>
-            <tbody>
-                {
-                    rows.map((row, i) => {
-                        // console.log(row, i);
-                        return (
-                            <tr key={i} >
-                                {
-
-                                    row.map((cell, j) => {
-                                        if (cell === null || cell === undefined) {
-                                            return <td key={j} >-</td>;
-                                        }
-                                        else {
-                                            return <td key={j} > {cell} </td>;
-                                        }
-                                    })
-                                }
-                            </tr>
-                        );
-                    })
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     );
 }

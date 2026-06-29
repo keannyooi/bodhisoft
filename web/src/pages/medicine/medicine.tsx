@@ -5,6 +5,7 @@ import type { Medicine, MedicineType, MedicineStatus } from "../../api/medicine"
 import { getMedicines, medicineTypes, medicineStatuses } from "../../api/medicine";
 import DataTable from "../../components/datatable";
 import Pagination from "../../components/pagination";
+import { pageSize } from "../../components/pagination";
 import '../../App.css';
 
 export default function MedicinePage() {
@@ -65,12 +66,9 @@ export default function MedicinePage() {
             return 0;
         });
 
-    const pageSize = 5;
-
     const totalPages = Math.max(1, Math.ceil(processedMedicines.length / pageSize));
     const safePage = Math.min(page, totalPages);
     const paginatedMedicines = processedMedicines.slice((safePage - 1) * pageSize, safePage * pageSize);
-
 
     useEffect(() => {
         async function loadMedicine() {
@@ -115,84 +113,100 @@ export default function MedicinePage() {
     }
 
     return (
-        <div>
-            <h2>Medicine</h2>
-
-            <button onClick={() => navigate("/medicine/create")}>Create Medicine</button>
-
-            <input
-                value={searchKeyword}
-                onChange={(e) => {
-                    setSearchKeyword(e.target.value);
-                }}
-                placeholder="Search medicine"
-            />
-
-            <div>
-                <label>Sort by:</label>
-                <select onChange={(e) => { setSortBy(e.target.value); }}>
-                    <option value="id">ID</option>
-                    <option value="name">Name</option>
-                    <option value="strength">Strength</option>
-                </select>
-                <button onClick={() => setIsSortAsc(!isSortAsc)}>
-                    Sort order: {isSortAsc ? "▲" : "▼"}
-                </button>
+        <div className="page-shell">
+            <div className="page-header">
+                <h2>Medicine</h2>
+                <button onClick={() => navigate("/medicine/create")}>Create Medicine</button>
             </div>
 
-            <div>
-                <button onClick={() => setExpandedTypeFilter(!expandedTypeFilter)}>
-                    {expandedTypeFilter ? "▼" : "▶"} Filter Type
-                </button>
-                {expandedTypeFilter && (
-                    <div>
-                        {medicineTypes.map(type => (
-                            <label key={type}>
-                                <input
-                                    type="checkbox"
-                                    checked={filterType.includes(type)}
-                                    onChange={() => toggleTypeFilter(type)}
-                                />
-                                {" "} {type}
-                            </label>
-                        ))}
+            <div className="section-card">
+                <div className="controls-row">
+                    <div className="control-group">
+                        <label htmlFor="medicine-search">Search</label>
+                        <input
+                            id="medicine-search"
+                            value={searchKeyword}
+                            onChange={(e) => {
+                                setSearchKeyword(e.target.value);
+                            }}
+                            placeholder="Search medicine"
+                        />
                     </div>
-                )}
-            </div>
-
-            <div>
-                <button onClick={() => setExpandedStatusFilter(!expandedStatusFilter)}>
-                    {expandedStatusFilter ? "▼" : "▶"} Filter Status
-                </button>
-                {expandedStatusFilter && (
-                    <div>
-                        {medicineStatuses.map(status => (
-                            <label key={status}>
-                                <input
-                                    type="checkbox"
-                                    checked={filterStatus.includes(status)}
-                                    onChange={() => toggleStatusFilter(status)}
-                                />
-                                {" "} {status}
-                            </label>
-                        ))}
+                    <div className="control-group">
+                        <label htmlFor="medicine-sort">Sort by</label>
+                        <select id="medicine-sort" onChange={(e) => { setSortBy(e.target.value); }}>
+                            <option value="id">ID</option>
+                            <option value="name">Name</option>
+                            <option value="strength">Strength</option>
+                        </select>
                     </div>
-                )}
+
+                    <button onClick={() => setIsSortAsc(!isSortAsc)}>
+                        Sort order: {isSortAsc ? "▲" : "▼"}
+                    </button>
+                </div>
             </div>
 
-            <DataTable
-                headers={["ID", "Name", "Type", "Strength", "Status", "Actions"]}
-                rows={paginatedMedicines.map((medicine) => [
-                    medicine.code,
-                    medicine.name,
-                    medicine.type,
-                    `${medicine.strengthValue} ${medicine.strengthUnit}`,
-                    medicine.status,
-                    <button onClick={() => navigate(`/medicine/${medicine.code}`)}>View Details</button>
-                ])}
-            />
+            <div className="controls-row">
+                <div className="section-card">
+                    <div className="filter-group">
+                        <button onClick={() => setExpandedTypeFilter(!expandedTypeFilter)}>
+                            {expandedTypeFilter ? "▼" : "▶"} Filter Type
+                        </button>
+                        {expandedTypeFilter && (
+                            <div className="filter-options">
+                                {medicineTypes.map(type => (
+                                    <label key={type}>
+                                        <input
+                                            type="checkbox"
+                                            checked={filterType.includes(type)}
+                                            onChange={() => toggleTypeFilter(type)}
+                                        />
+                                        {" "} {type}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
-            <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
+                <div className="section-card">
+                    <div className="filter-group">
+                        <button onClick={() => setExpandedStatusFilter(!expandedStatusFilter)}>
+                            {expandedStatusFilter ? "▼" : "▶"} Filter Status
+                        </button>
+                        {expandedStatusFilter && (
+                            <div className="filter-options">
+                                {medicineStatuses.map(status => (
+                                    <label key={status}>
+                                        <input
+                                            type="checkbox"
+                                            checked={filterStatus.includes(status)}
+                                            onChange={() => toggleStatusFilter(status)}
+                                        />
+                                        {" "} {status}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="section-card">
+                <DataTable
+                    headers={["ID", "Name", "Type", "Strength", "Status", "Actions"]}
+                    rows={paginatedMedicines.map((medicine) => [
+                        medicine.code,
+                        medicine.name,
+                        medicine.type,
+                        `${medicine.strengthValue} ${medicine.strengthUnit}`,
+                        medicine.status,
+                        <button key={medicine.code} onClick={() => navigate(`/medicine/${medicine.code}`)}>View Details</button>
+                    ])}
+                />
+                <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
+            </div>
         </div>
     );
 }
